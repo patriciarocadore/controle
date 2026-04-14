@@ -1,36 +1,20 @@
-# StockFlow — Controle de Vendas & Estoque
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-App PWA para controle de vendas e estoque com GitHub como banco de dados.
+# Run and deploy your AI Studio app
 
-## Instalação no GitHub Pages
+This contains everything you need to run your app locally.
 
-1. Crie um repositório no GitHub (pode ser público ou privado)
-2. Faça upload dos arquivos: `index.html`, `manifest.json`, `sw.js`
-3. Ative GitHub Pages: Settings → Pages → Deploy from branch → main / root
-4. Acesse a URL do seu Pages (ex: `https://seu-usuario.github.io/seu-repo`)
+View your app in AI Studio: https://ai.studio/apps/1e67e2db-4862-4100-b674-ad6171b455ce
 
-## Primeiro acesso
+## Run Locally
 
-1. Crie um **Personal Access Token** com permissão `repo`:
-   - GitHub → Settings → Developer settings → Personal access tokens → Generate new token
-2. Abra o app e preencha: Token, usuário e nome do repositório
-3. Pronto! O app vai criar automaticamente os arquivos de dados no repo.
+**Prerequisites:**  Node.js
 
-## Funcionalidades
 
-- **Dashboard** — Métricas em tempo real, gráfico de vendas, top produtos, alertas de estoque
-- **Vendas** — Registro de vendas com múltiplos produtos, desconto, forma de pagamento
-- **Estoque** — Movimentação de entrada/saída/ajuste, nível visual de cada produto
-- **Produtos** — Cadastro completo com foto, SKU, preço, custo, estoque mínimo
-- **Relatórios** — Ranking de produtos, margem média, ticket médio, vendas por categoria
-- **Histórico** — Log completo de todas as movimentações
-
-## PWA — Instalar no celular
-
-No Chrome/Edge, acesse o app e toque em "Adicionar à tela inicial".
-O app funciona offline e sincroniza quando há conexão.
-
-## Dados
-
-Todos os dados ficam em `/data/*.json` no seu repositório GitHub.
-Use "Exportar" nas configurações para fazer backup local a qualquer momento.
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
