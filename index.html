@@ -322,14 +322,16 @@ td.strong { color: var(--text); font-weight: 500; }
 .product-thumb {
   width: 38px; height: 38px;
   border-radius: 8px;
-  object-fit: cover;
   background: var(--bg4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   border: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
 }
+.product-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .actions-cell { display: flex; align-items: center; gap: 6px; }
 .icon-btn {
@@ -475,7 +477,7 @@ select.filter-select:focus { border-color: var(--accent); }
   overflow: hidden;
   margin-bottom: 10px;
 }
-.photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; flex-shrink: 0; }
 
 /* ─── CHART AREA ─── */
 .chart-area {
@@ -1660,7 +1662,7 @@ function previewPhoto(input){
   const r = new FileReader();
   r.onload = e => {
     photoBase64 = e.target.result;
-    document.getElementById('photo-preview').innerHTML = `<img src="${photoBase64}"/>`;
+    document.getElementById('photo-preview').innerHTML = `<img src="${photoBase64}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`;
   };
   r.readAsDataURL(file);
 }
@@ -1680,7 +1682,7 @@ function editarProduto(id){
   document.getElementById('prod-min').value = p.estoqueMin||'';
   document.getElementById('prod-desc').value = p.descricao||'';
   document.getElementById('prod-sku').value = p.sku||'';
-  if(p.foto){ photoBase64=p.foto; document.getElementById('photo-preview').innerHTML=`<img src="${p.foto}"/>`; }
+  if(p.foto){ photoBase64=p.foto; document.getElementById('photo-preview').innerHTML=`<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`; }
   else { photoBase64=null; document.getElementById('photo-preview').innerHTML='<span>📦</span>'; }
 }
 
