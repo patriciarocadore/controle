@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { AppData, GitHubConfig, Supply, Product, Purchase, Sale, PurchaseItem } from './types';
-import { GitHubService } from './lib/githubService';
+import { useState, useEffect, useCallback } from 'react';
+import { AppData, GitHubConfig, Supply, Product, Purchase, Sale } from './types';
 import { toast } from 'sonner';
+
+const API_BASE = 'https://api.github.com';
 
 export function useStockFlow() {
   const [config, setConfig] = useState<GitHubConfig | null>(() => {
@@ -14,7 +15,6 @@ export function useStockFlow() {
       const saved = localStorage.getItem('stockflow_gh_config');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
-      console.error('Failed to parse config from localStorage', e);
       return null;
     }
   });
@@ -42,7 +42,91 @@ export function useStockFlow() {
     localStorage.setItem('stockflow_data', JSON.stringify(data));
   }, [data]);
 
-  const githubService = useMemo(() => (config ? new GitHubService(config) : null), [config]);
+  const githubRequest = useCallback(async (path: string, options: RequestInit = {}) => {
+    if (!config) return null;
+    const url = `${API_BASE}/repos/${config.owner}/${config.repo}/contents/${path}`;
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        Authorization: `token ${config.token}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (response.status === 404 && options.method !== 'PUT') return null;
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'GitHub API error');
+    }
+    return response.json();
+  }, [config]);
+
+  const sync = async () => {
+    if (!config) return;
+    setIsLoading(true);
+    try {
+      // 1. Try to get existing file to get SHA
+      const existingFile = await githubRequest('stockflow_data.json');
+      const sha = existingFile?.sha;
+
+      // 2. Prepare content
+      const timestamp = new Date().toISOString();
+      const dataToSave = { ...data, meta: { ...data.meta, lastSync: timestamp } };
+      const jsonString = JSON.stringify(dataToSave, null, 2);
+      const encoded = btoa(unescape(encodeURIComponent(jsonString)));
+
+      // 3. Update/Create file
+      await githubRequest('stockflow_data.json', {
+        method: 'PUT',
+        body: JSON.stringify({
+          message: `StockFlow Sync: ${timestamp}`,
+          content: encoded,
+          sha,
+        }),
+      });
+
+      setData(dataToSave);
+      toast.success('Sincronizado com GitHub!');
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast.error('Erro ao sincronizar com GitHub');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadFromGitHub = async () => {
+    if (!config) return;
+    setIsLoading(true);
+    try {
+      const file = await githubRequest('stockflow_data.json');
+      if (file) {
+        const content = atob(file.content);
+        const decoded = JSON.parse(decodeURIComponent(escape(content)));
+        setData(decoded);
+        toast.success('Dados carregados do GitHub!');
+      } else {
+        toast.info('Nenhum dado encontrado no GitHub. Criando novo...');
+      }
+    } catch (error) {
+      toast.error('Erro ao carregar do GitHub');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (config && !data.meta.lastSync) {
+      loadFromGitHub();
+    }
+  }, [config]);
+
+  const saveConfig = (newConfig: GitHubConfig) => {
+    localStorage.setItem('stockflow_gh_config', JSON.stringify(newConfig));
+    setConfig(newConfig);
+  };
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -52,7 +136,7 @@ export function useStockFlow() {
     a.download = `stockflow_backup_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Backup exportado com sucesso!');
+    toast.success('Backup exportado!');
   };
 
   const importData = (file: File) => {
@@ -60,56 +144,15 @@ export function useStockFlow() {
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target?.result as string);
-        // Basic validation
         if (imported.supplies && imported.products) {
           setData(imported);
-          toast.success('Dados importados com sucesso!');
-        } else {
-          toast.error('Arquivo de backup inválido.');
+          toast.success('Dados importados!');
         }
       } catch (error) {
-        toast.error('Erro ao ler arquivo de backup.');
+        toast.error('Erro ao importar');
       }
     };
     reader.readAsText(file);
-  };
-
-  const loadData = useCallback(async () => {
-    if (!githubService) return;
-    setIsLoading(true);
-    try {
-      const loadedData = await githubService.loadAllData();
-      setData(loadedData);
-    } catch (error) {
-      toast.error('Erro ao carregar dados do GitHub');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [githubService]);
-
-  useEffect(() => {
-    if (config) {
-      loadData();
-    }
-  }, [config, loadData]);
-
-  const saveConfig = (newConfig: GitHubConfig) => {
-    localStorage.setItem('stockflow_gh_config', JSON.stringify(newConfig));
-    setConfig(newConfig);
-  };
-
-  const sync = async () => {
-    if (!githubService) return;
-    setIsLoading(true);
-    try {
-      const savedData = await githubService.saveAllData(data);
-      setData(savedData);
-      toast.success('Sincronizado com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao sincronizar');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   // --- Logic for Supplies ---
